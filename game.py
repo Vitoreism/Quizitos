@@ -56,8 +56,13 @@ class Game:
 
         return ans
 
-
+    def sort_players(self) -> None:
+        self.players.sort(key= lambda x: (x.hits, x.time_played))
     
+
+    def show_players(self) -> None:
+        for i in range(self.num_players):
+            print(f'{i+1}) Nome: {self.players[i].name} , Questões acertadas: {self.players[i].hits}, Tempo para responder: {round(self.players[i].time_played, 2)}\n')
 
     def run(self) -> None:
         # Choose a player
@@ -108,10 +113,13 @@ class Game:
                 print("ERROU")
                 self.players_alive.pop(player_index)
             
+            
             if self.players_alive[player_index].get_hits() == 10:
                 print(f"Jogador já acertou todas as perguntas, removendo {self.players_alive[player_index].name}")
                 self.players_alive.pop(player_index)
 
+        self.sort_players()
+        self.show_players()
             
 
 if __name__ == '__main__':
