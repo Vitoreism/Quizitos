@@ -20,8 +20,8 @@ class Game:
         self.players_alive: List[Player] = deepcopy(self.players)
         self.num_players: int = len(self.players)
         self.easy_questions: List[Dict[str, List[str], int]] = EASY_QUESTIONS
-        self.medium_questions = MEDIUM_QUESTIONS
-        self.hard_questions = HARD_QUESTIONS
+        self.medium_questions: List[Dict[str, List[str], int]] = MEDIUM_QUESTIONS
+        self.hard_questions: List[Dict[str, List[str], int]] = HARD_QUESTIONS
     
 
     def initialize_players(self, names: List[str], limit: int) -> List[Player]:
@@ -33,9 +33,10 @@ class Game:
         return list_players
 
     
-    def show_question(self, cur_player: str, cur_question: str, alternatives: List[str]) -> None:
+    def show_question(self, cur_player: str, cur_question: str, alternatives: List[str], cur_level: str) -> None:
         print('-='*20)
-        print(f'Jogador Escolhido: {cur_player.name}\n')
+        print(f'Jogador Escolhido: {cur_player.name}')
+        print(f"Nível da questão: {cur_level}\n")
         print(f'Pergunta: {cur_question}\n')
         print(f'Alternativas: \n')
 
@@ -64,18 +65,30 @@ class Game:
             hits = cur_player.get_hits()
 
             if hits < 3:
-                cur_question_set = choice(self.easy_questions)
+                cur_question_set = choice(self.easy_questions) 
+                cur_level = 'Fácil'
             elif hits < 8:
                 cur_question_set = choice(self.medium_questions)
+                cur_level = 'Médio'
             else:
                 cur_question_set = choice(self.hard_questions)
+                cur_level = 'Difícil'
             
             alternatives = cur_question_set['Alternativas']
             question = cur_question_set['Pergunta']
-            self.show_question(cur_player=cur_player, cur_question=question, alternatives=alternatives)
+            self.show_question(cur_player=cur_player, cur_question=question, alternatives=alternatives, cur_level=cur_level)
             ans = self.get_users_answer()
             alternatives_letters = ['A', 'B', 'C', 'D']
             player_index = self.players_alive.index(cur_player)
+
+            # Remover a questão que foi feita
+            if hits < 3:
+                self.easy_questions.remove(cur_question_set)
+            elif hits < 8:
+                self.medium_questions.remove(cur_question_set)
+            else:
+                self.hard_questions.remove(cur_question_set)
+
 
             if cur_question_set['Resposta'] == alternatives_letters.index(ans):
                 cur_player.increment_hits()
@@ -87,6 +100,9 @@ class Game:
             
             if self.players_alive[player_index].get_hits() == 10:
                 print(f"Jogador já acertou todas as perguntas, removendo {self.players_alive[player_index].name}")
+                self.players_alive.pop(player_index)
+
+            
 
 if __name__ == '__main__':
     game = Game(names=['Vitor', 'Gabriel', 'Davi', 'Joao', 'Micael'], limit=10)
