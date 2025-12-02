@@ -1,5 +1,6 @@
 from typing import List, Dict
 from player import Player
+import time
 from copy import deepcopy
 from random import randint, choice
 from data import EASY_QUESTIONS, MEDIUM_QUESTIONS, HARD_QUESTIONS
@@ -56,6 +57,8 @@ class Game:
         return ans
 
 
+    
+
     def run(self) -> None:
         # Choose a player
         while self.players_alive:
@@ -77,10 +80,18 @@ class Game:
             alternatives = cur_question_set['Alternativas']
             question = cur_question_set['Pergunta']
             self.show_question(cur_player=cur_player, cur_question=question, alternatives=alternatives, cur_level=cur_level)
+            
+            start_time = time.perf_counter()
+
             ans = self.get_users_answer()
             alternatives_letters = ['A', 'B', 'C', 'D']
             player_index = self.players_alive.index(cur_player)
+ 
+            end_time = time.perf_counter()
 
+            time_to_answer = end_time - start_time
+            
+            cur_player.add_time_played(time_to_answer=time_to_answer)
             # Remover a questão que foi feita
             if hits < 3:
                 self.easy_questions.remove(cur_question_set)
@@ -88,8 +99,7 @@ class Game:
                 self.medium_questions.remove(cur_question_set)
             else:
                 self.hard_questions.remove(cur_question_set)
-
-
+            
             if cur_question_set['Resposta'] == alternatives_letters.index(ans):
                 cur_player.increment_hits()
                 print("CERTA RESPOSTA")

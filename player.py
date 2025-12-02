@@ -14,8 +14,11 @@ class Player:
         print('-='*20)
     
 
-    def increment_hits(self):
+    def increment_hits(self) -> None:
         self.hits += 1
     
     def get_hits(self) -> int:
         return self.hits
+
+    def add_time_played(self, time_to_answer:float) -> None:
+        self.time_played += time_to_answer
