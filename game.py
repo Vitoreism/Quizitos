@@ -1,7 +1,7 @@
 from typing import List, Dict
 from player import Player
 import time
-from copy import deepcopy
+from copy import copy
 from random import randint, choice
 from data import EASY_QUESTIONS, MEDIUM_QUESTIONS, HARD_QUESTIONS
 
@@ -18,7 +18,7 @@ class Game:
         -. Perguntas dificeis
         """
         self.players: List[Player] = self.initialize_players(names=names, limit=limit)
-        self.players_alive: List[Player] = deepcopy(self.players)
+        self.players_alive: List[Player] = copy(self.players)
         self.num_players: int = len(self.players)
         self.easy_questions: List[Dict[str, List[str], int]] = EASY_QUESTIONS
         self.medium_questions: List[Dict[str, List[str], int]] = MEDIUM_QUESTIONS
@@ -57,7 +57,7 @@ class Game:
         return ans
 
     def sort_players(self) -> None:
-        self.players.sort(key= lambda x: (x.hits, -x.time_played))
+        self.players.sort(key= lambda x: (x.hits, -x.time_played), reverse=True)
     
 
     def show_players(self) -> None:
@@ -65,11 +65,10 @@ class Game:
             print(f'{i+1}) Nome: {self.players[i].name} , Questões acertadas: {self.players[i].hits}, Tempo para responder: {round(self.players[i].time_played, 2)}\n')
 
     def run(self) -> None:
-        # Choose a player
+        
         while self.players_alive:
             cur_player = choice(self.players_alive)
 
-            # Choose the question acording to its level
             hits = cur_player.get_hits()
 
             if hits < 3:
@@ -112,7 +111,7 @@ class Game:
             else:
                 print("ERROU")
                 self.players_alive.pop(player_index)
-            
+                continue            
             
             if self.players_alive[player_index].get_hits() == 10:
                 print(f"Jogador já acertou todas as perguntas, removendo {self.players_alive[player_index].name}")
