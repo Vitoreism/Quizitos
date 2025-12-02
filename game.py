@@ -57,7 +57,7 @@ class Game:
         return ans
 
     def sort_players(self) -> None:
-        self.players.sort(key= lambda x: (x.hits, x.time_played))
+        self.players.sort(key= lambda x: (x.hits, -x.time_played))
     
 
     def show_players(self) -> None:
