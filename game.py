@@ -1,127 +1,309 @@
-from typing import List, Dict
-from player import Player
-import time
+from typing import List, Dict, Any, Tuple
 from copy import copy
-from random import randint, choice
-from data import EASY_QUESTIONS, MEDIUM_QUESTIONS, HARD_QUESTIONS
+from random import choice
+import time
 
+import streamlit as st
+
+from player import Player
+from data import EASY_QUESTIONS, MEDIUM_QUESTIONS, HARD_QUESTIONS
 
 
 class Game:
     def __init__(self, names: List[str], limit: int):
         """
         -> Lista de jogadores
-        -> Jogadores disponivesis
-        -> quantidade de jogadores
-        -> Perguntas faceis
-        -> Perguntas medias
-        -. Perguntas dificeis
+        -> Jogadores disponíveis
+        -> Quantidade de jogadores
+        -> Perguntas fáceis, médias e difíceis
         """
         self.players: List[Player] = self.initialize_players(names=names, limit=limit)
         self.players_alive: List[Player] = copy(self.players)
         self.num_players: int = len(self.players)
-        self.easy_questions: List[Dict[str, List[str], int]] = EASY_QUESTIONS
-        self.medium_questions: List[Dict[str, List[str], int]] = MEDIUM_QUESTIONS
-        self.hard_questions: List[Dict[str, List[str], int]] = HARD_QUESTIONS
-    
+        # cada pergunta deve ser algo como:
+        # {"Pergunta": str, "Alternativas": [str, str, str, str], "Resposta": int}
+        self.easy_questions: List[Dict[str, Any]] = EASY_QUESTIONS.copy()
+        self.medium_questions: List[Dict[str, Any]] = MEDIUM_QUESTIONS.copy()
+        self.hard_questions: List[Dict[str, Any]] = HARD_QUESTIONS.copy()
 
     def initialize_players(self, names: List[str], limit: int) -> List[Player]:
-        list_players  = list()
+        list_players = []
         for name in names:
             player = Player(name=name, limit=limit)
             list_players.append(player)
-
         return list_players
 
-    
-    def show_question(self, cur_player: str, cur_question: str, alternatives: List[str], cur_level: str) -> None:
-        print('-='*20)
-        print(f'Jogador Escolhido: {cur_player.name}')
-        print(f"Nível da questão: {cur_level}\n")
-        print(f'Pergunta: {cur_question}\n')
-        print(f'Alternativas: \n')
-
-        alternatives_letters = ['A', 'B', 'C', 'D']
-        for i in range(len(alternatives)):
-            print(f'{alternatives_letters[i]}) {alternatives[i]}')
-        
-        
-    
-    def get_users_answer(self) -> str:
-        alternatives_letters = ['A', 'B', 'C', 'D']
-        ans = input("\nResposta: ").upper()
-        while ans not in alternatives_letters:
-            print("Resposta inválida, digite uma letra de A até D")
-            ans = input("\nResposta: ").upper()
-
-        return ans
-
     def sort_players(self) -> None:
-        self.players.sort(key= lambda x: (x.hits, -x.time_played), reverse=True)
-    
+        # mesmo critério do seu código original:
+        # ordenar por hits (desc) e, em seguida, pelo menor tempo total
+        self.players.sort(key=lambda x: (x.hits, -x.time_played), reverse=True)
 
-    def show_players(self) -> None:
-        for i in range(self.num_players):
-            print(f'{i+1}) Nome: {self.players[i].name} , Questões acertadas: {self.players[i].hits}, Tempo para responder: {round(self.players[i].time_played, 2)}\n')
+    def pick_question(self) -> Tuple[Player, Dict[str, Any], str]:
+        """
+        Escolhe um jogador vivo aleatório, define o nível da questão
+        e devolve (jogador, question_set, nível).
+        """
+        if not self.players_alive:
+            raise ValueError("No players alive")
 
-    def run(self) -> None:
-        
-        while self.players_alive:
-            cur_player = choice(self.players_alive)
+        cur_player = choice(self.players_alive)
+        hits = cur_player.get_hits()
 
-            hits = cur_player.get_hits()
+        if hits < 3:
+            cur_question_set = choice(self.easy_questions)
+            cur_level = "Fácil"
+        elif hits < 8:
+            cur_question_set = choice(self.medium_questions)
+            cur_level = "Médio"
+        else:
+            cur_question_set = choice(self.hard_questions)
+            cur_level = "Difícil"
 
-            if hits < 3:
-                cur_question_set = choice(self.easy_questions) 
-                cur_level = 'Fácil'
-            elif hits < 8:
-                cur_question_set = choice(self.medium_questions)
-                cur_level = 'Médio'
-            else:
-                cur_question_set = choice(self.hard_questions)
-                cur_level = 'Difícil'
-            
-            alternatives = cur_question_set['Alternativas']
-            question = cur_question_set['Pergunta']
-            self.show_question(cur_player=cur_player, cur_question=question, alternatives=alternatives, cur_level=cur_level)
-            
-            start_time = time.perf_counter()
+        return cur_player, cur_question_set, cur_level
 
-            ans = self.get_users_answer()
-            alternatives_letters = ['A', 'B', 'C', 'D']
-            player_index = self.players_alive.index(cur_player)
- 
-            end_time = time.perf_counter()
+    def answer_question(
+        self,
+        cur_player: Player,
+        cur_question_set: Dict[str, Any],
+        ans_letter: str,
+        time_to_answer: float,
+    ) -> Dict[str, Any]:
+        """
+        Processa a resposta do jogador e atualiza o estado do jogo.
 
-            time_to_answer = end_time - start_time
-            
-            cur_player.add_time_played(time_to_answer=time_to_answer)
-            # Remover a questão que foi feita
-            if hits < 3:
+        Retorna um dicionário com:
+            - correct: bool
+            - eliminated: bool
+            - eliminated_name: Optional[str]
+            - finished_for_player: bool  (atingiu 10 acertos)
+            - game_over: bool (não há mais jogadores vivos)
+            - player_hits: int (acertos atuais do jogador, se ainda vivo)
+        """
+        alternatives_letters = ["A", "B", "C", "D"]
+        cur_player.add_time_played(time_to_answer=time_to_answer)
+
+        hits_before = cur_player.get_hits()
+        # Remover a questão que foi feita da lista adequada
+        if hits_before < 3:
+            if cur_question_set in self.easy_questions:
                 self.easy_questions.remove(cur_question_set)
-            elif hits < 8:
+        elif hits_before < 8:
+            if cur_question_set in self.medium_questions:
                 self.medium_questions.remove(cur_question_set)
-            else:
+        else:
+            if cur_question_set in self.hard_questions:
                 self.hard_questions.remove(cur_question_set)
-            
-            if cur_question_set['Resposta'] == alternatives_letters.index(ans):
-                cur_player.increment_hits()
-                print("CERTA RESPOSTA")
-            
-            else:
-                print("ERROU")
-                self.players_alive.pop(player_index)
-                continue            
-            
-            if self.players_alive[player_index].get_hits() == 10:
-                print(f"Jogador já acertou todas as perguntas, removendo {self.players_alive[player_index].name}")
-                self.players_alive.pop(player_index)
 
-        self.sort_players()
-        self.show_players()
-            
+        player_index = self.players_alive.index(cur_player)
+        answer_index = alternatives_letters.index(ans_letter)
 
-if __name__ == '__main__':
-    game = Game(names=['Vitor', 'Gabriel', 'Davi', 'Joao', 'Micael'], limit=10)
+        result: Dict[str, Any] = {
+            "correct": False,
+            "eliminated": False,
+            "eliminated_name": None,
+            "finished_for_player": False,
+            "game_over": False,
+            "player_hits": hits_before,
+        }
 
-    game.run()
+        if cur_question_set["Resposta"] == answer_index:
+            # certa resposta
+            cur_player.increment_hits()
+            result["correct"] = True
+            result["player_hits"] = cur_player.get_hits()
+        else:
+            # errou -> remove da lista de vivos
+            result["correct"] = False
+            result["eliminated"] = True
+            result["eliminated_name"] = cur_player.name
+            self.players_alive.pop(player_index)
+
+        # Checa se o jogador (ainda vivo) atingiu 10 acertos
+        if result["correct"] and cur_player in self.players_alive and cur_player.get_hits() == 10:
+            self.players_alive.remove(cur_player)
+            result["finished_for_player"] = True
+
+        # Verifica se o jogo acabou (ninguém vivo)
+        if not self.players_alive:
+            result["game_over"] = True
+
+        return result
+
+
+# ===================== STREAMLIT UI ===================== #
+
+
+def reset_app_state():
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+
+
+def setup_page_config():
+    st.set_page_config(
+        page_title="Quiz Game",
+        page_icon="🎲",
+        layout="centered",
+    )
+
+
+def show_setup_screen():
+    st.title("🎮 Quiz Game com Streamlit")
+    st.markdown(
+        """
+    Bem-vindo!  
+    Digite os nomes dos jogadores e o limite de acertos para começar.
+    """
+    )
+
+    names_input = st.text_input(
+        "Nomes dos jogadores (separados por vírgula)",
+        value="Vitor, Gabriel, Davi, Joao, Micael",
+    )
+
+    limit = st.number_input(
+        "Limite de acertos para cada jogador (mesmo valor que você usava no Player)",
+        min_value=1,
+        max_value=50,
+        value=10,
+        step=1,
+    )
+
+    if st.button("🚀 Começar o jogo"):
+        names = [n.strip() for n in names_input.split(",") if n.strip()]
+        if not names:
+            st.warning("Por favor, informe pelo menos um jogador.")
+            return
+
+        st.session_state.game = Game(names=names, limit=limit)
+        st.session_state.current_question = None  # question + metadata
+        st.session_state.question_start_time = None
+        st.session_state.last_result = None
+        st.rerun()
+
+
+def prepare_new_question():
+    game: Game = st.session_state.game
+    cur_player, cur_question_set, cur_level = game.pick_question()
+
+    st.session_state.current_question = {
+        "player_name": cur_player.name,
+        "player_obj": cur_player,
+        "question_set": cur_question_set,
+        "level": cur_level,
+    }
+    st.session_state.question_start_time = time.perf_counter()
+
+
+def show_game_screen():
+    game: Game = st.session_state.game
+
+    st.title("🎲 Quiz Game")
+
+    # Mostrar mensagem do último resultado, se houver
+    last_result = st.session_state.get("last_result")
+    if last_result:
+        if last_result["correct"]:
+            st.success(
+                f"✅ {last_result['player_name']} acertou! "
+                f"Total de acertos: {last_result['player_hits']}."
+            )
+        else:
+            st.error(
+                f"❌ {last_result['player_name']} errou e foi eliminado!"
+            )
+        if last_result.get("finished_for_player"):
+            st.info(
+                f"🏆 {last_result['player_name']} já acertou todas as perguntas (10) "
+                "e foi removido da lista de jogadores vivos."
+            )
+
+        # Limpar para só aparecer uma vez
+        st.session_state.last_result = None
+
+    # Se não há mais jogadores vivos, mostrar ranking final
+    if not game.players_alive:
+        st.subheader("🏁 Fim de jogo!")
+        game.sort_players()
+
+        data = [
+            {
+                "Posição": i + 1,
+                "Nome": player.name,
+                "Acertos": player.hits,
+                "Tempo total (s)": round(player.time_played, 2),
+            }
+            for i, player in enumerate(game.players)
+        ]
+        st.table(data)
+
+        if st.button("🔁 Jogar novamente"):
+            reset_app_state()
+            st.rerun()
+        return
+
+    # Se ainda não temos questão atual, sorteia uma
+    if st.session_state.current_question is None:
+        prepare_new_question()
+
+    cq = st.session_state.current_question
+    cur_player_name = cq["player_name"]
+    cur_player_obj: Player = cq["player_obj"]
+    cur_question_set = cq["question_set"]
+    cur_level = cq["level"]
+
+    st.markdown(f"### 👤 Jogador: **{cur_player_name}**")
+    st.markdown(f"**Nível da questão:** {cur_level}")
+
+    st.markdown(f"#### ❓ Pergunta")
+    st.write(cur_question_set["Pergunta"])
+
+    alternatives = cur_question_set["Alternativas"]
+    alternatives_letters = ["A", "B", "C", "D"]
+    options = [
+        f"{letter}) {text}" for letter, text in zip(alternatives_letters, alternatives)
+    ]
+
+    with st.form("answer_form", clear_on_submit=False):
+        choice_label = st.radio("Escolha sua resposta:", options, index=0)
+        submitted = st.form_submit_button("Responder")
+
+        if submitted:
+            # extrai apenas a letra (A, B, C ou D)
+            ans_letter = choice_label.split(")")[0].strip()
+            end_time = time.perf_counter()
+            start_time = st.session_state.question_start_time or end_time
+            time_to_answer = end_time - start_time
+
+            result = game.answer_question(
+                cur_player=cur_player_obj,
+                cur_question_set=cur_question_set,
+                ans_letter=ans_letter,
+                time_to_answer=time_to_answer,
+            )
+
+            st.session_state.last_result = {
+                "correct": result["correct"],
+                "player_name": cur_player_name,
+                "player_hits": result["player_hits"],
+                "finished_for_player": result["finished_for_player"],
+            }
+
+            # Limpa a questão atual para sortear uma nova no próximo rerun
+            st.session_state.current_question = None
+            st.session_state.question_start_time = None
+
+            # Recarrega para mostrar feedback e, depois, a próxima questão
+            st.rerun()
+
+
+def main():
+    setup_page_config()
+
+    if "game" not in st.session_state:
+        show_setup_screen()
+    else:
+        show_game_screen()
+
+
+if __name__ == "__main__":
+    main()
