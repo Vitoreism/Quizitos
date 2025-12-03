@@ -149,7 +149,7 @@ def setup_page_config():
 def show_setup_screen():
     st.title("🎮 QUIZITOS - Quiz Game of Software Requirements Specification")
     
-    # Atualizei o texto para deixar as regras claras para o usuário
+    
     st.markdown(
         """
     **Bem-vindo!** Digite os nomes dos jogadores para começar.
@@ -157,13 +157,13 @@ def show_setup_screen():
     ⚠️ **Regras:**
     - Mínimo de **1** jogador.
     - Máximo de **5** jogadores.
-    - O jogo termina quando um jogador atingir **10 acertos**.
+    - O jogo termina quando **todos** os jogadores tiverem encerrado sua participação (vencendo ou sendo eliminados).
     """
     )
 
     names_input = st.text_input(
         "Nomes dos jogadores (separados por vírgula)",
-        # Ajustei o valor padrão para ter 5 nomes, servindo de exemplo do limite
+        
         value="Vitor, Gabriel, Davi, Joao, Micael",
         help="Máximo de 5 jogadores permitidos."
     )
