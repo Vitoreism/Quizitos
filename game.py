@@ -140,14 +140,14 @@ def reset_app_state():
 
 def setup_page_config():
     st.set_page_config(
-        page_title="Quiz Game",
+        page_title="QUIZITOS - Quiz Game of Software Requirements Specification",
         page_icon="🎲",
         layout="centered",
     )
 
 
 def show_setup_screen():
-    st.title("🎮 Quiz Game com Streamlit")
+    st.title("🎮 QUIZITOS - Quiz Game of Software Requirements Specification")
     st.markdown(
         """
     Bem-vindo!  
@@ -197,7 +197,7 @@ def prepare_new_question():
 def show_game_screen():
     game: Game = st.session_state.game
 
-    st.title("🎲 Quiz Game")
+    st.title("🎲 Quizitos Game")
 
     # Mostrar mensagem do último resultado, se houver
     last_result = st.session_state.get("last_result")
