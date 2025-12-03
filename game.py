@@ -148,34 +148,48 @@ def setup_page_config():
 
 def show_setup_screen():
     st.title("🎮 QUIZITOS - Quiz Game of Software Requirements Specification")
+    
+    # Atualizei o texto para deixar as regras claras para o usuário
     st.markdown(
         """
-    Bem-vindo!  
-    Digite os nomes dos jogadores e o limite de acertos para começar.
+    **Bem-vindo!** Digite os nomes dos jogadores para começar.
+    
+    ⚠️ **Regras:**
+    - Mínimo de **1** jogador.
+    - Máximo de **5** jogadores.
+    - O jogo termina quando um jogador atingir **10 acertos**.
     """
     )
 
     names_input = st.text_input(
         "Nomes dos jogadores (separados por vírgula)",
+        # Ajustei o valor padrão para ter 5 nomes, servindo de exemplo do limite
         value="Vitor, Gabriel, Davi, Joao, Micael",
+        help="Máximo de 5 jogadores permitidos."
     )
 
-    limit = st.number_input(
-        "Limite de acertos para cada jogador (mesmo valor que você usava no Player)",
-        min_value=1,
-        max_value=50,
-        value=10,
-        step=1,
-    )
+    # O input numérico do limite foi removido daqui.
 
     if st.button("🚀 Começar o jogo"):
+        # Processa a lista de nomes
         names = [n.strip() for n in names_input.split(",") if n.strip()]
+        
+        # Validação 1: Mínimo de jogadores
         if not names:
-            st.warning("Por favor, informe pelo menos um jogador.")
+            st.warning("⚠️ Por favor, informe pelo menos um jogador.")
             return
 
+        # Validação 2: Máximo de jogadores
+        if len(names) > 5:
+            st.error(f"⛔ Muitos jogadores! Você colocou {len(names)}, mas o máximo permitido é 5.")
+            return
+
+        # Definição do Limite Fixo
+        limit = 10 
+
+        # Inicialização do jogo
         st.session_state.game = Game(names=names, limit=limit)
-        st.session_state.current_question = None  # question + metadata
+        st.session_state.current_question = None
         st.session_state.question_start_time = None
         st.session_state.last_result = None
         st.rerun()
